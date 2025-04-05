@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>美食推荐系统 - TFFRS</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+    <meta name="description" content="一个简单实用的美食推荐系统，帮助您发现美味佳肴">
+</head>
+
+<body>
+    <div id="app">
+        <!-- 导航栏 -->
+        <header class="header">
+            <div class="container">
+                <div class="logo">
+                    <h1>TFFRS</h1>
+                    <p>美食推荐系统</p>
+                </div>
+                <nav class="main-nav">
+                    <ul id="nav-menu">
+                        <li><a href="#" class="active" data-page="home">首页</a></li>
+                        <li><a href="#" data-page="foods">美食浏览</a></li>
+                        <li><a href="#" data-page="recommend">个性推荐</a></li>
+                        <li id="nav-user-menu" class="user-menu">
+                            <!-- 登录前显示 -->
+                            <div id="before-login">
+                                <a href="#" data-page="login" class="login-btn">登录</a>
+                                <a href="#" data-page="register" class="register-btn">注册</a>
+                            </div>
+                            <!-- 登录后显示 -->
+                            <div id="after-login" style="display: none;">
+                                <a href="#" id="username-display" data-page="profile" class="username">用户名</a>
+                                <div class="dropdown-menu">
+                                    <a href="#" data-page="profile">个人主页</a>
+                                    <a href="#" data-page="favorites">我的收藏</a>
+                                    <a href="#" data-page="ratings">我的评分</a>
+                                    <a href="#" id="logout-btn">退出登录</a>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                    <button class="menu-toggle" id="menu-toggle">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+                </nav>
+            </div>
+        </header>
+
+        <!-- 页面内容容器 -->
+        <main id="main-content">
+            <!-- 各页面内容将通过JS动态加载到这里 -->
+            <div id="page-home" class="page active">
+                <section class="hero">
+                    <div class="container">
+                        <h2>发现美味，探索美食</h2>
+                        <p>基于您的口味偏好，为您推荐最适合的美食</p>
+                        <div class="search-bar">
+                            <input type="text" id="search-input" placeholder="搜索美食...">
+                            <button id="search-btn">搜索</button>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="featured">
+                    <div class="container">
+                        <h2>精选推荐</h2>
+                        <div class="food-grid" id="featured-foods">
+                            <!-- 动态加载精选美食 -->
+                            <div class="loading">加载中...</div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="categories">
+                    <div class="container">
+                        <h2>美食分类</h2>
+                        <div class="category-list" id="category-list">
+                            <!-- 动态加载分类 -->
+                            <div class="loading">加载中...</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- 其他页面内容会通过JS动态加载 -->
+        </main>
+
+        <!-- 页脚 -->
+        <footer class="footer">
+            <div class="container">
+                <p>&copy; 2023 TFFRS 美食推荐系统 - 保留所有权利</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- 模态框 -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- JavaScript 文件 -->
+    <script src="/js/app.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/ui.js"></script>
+    <script src="/js/router.js"></script>
+</body>
+
+</html>
