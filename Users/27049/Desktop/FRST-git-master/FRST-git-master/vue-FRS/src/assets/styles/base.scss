@@ -1,0 +1,85 @@
+// src/assets/styles/base.scss
+// 全局基础样式, 例如重置默认样式
+
+/* 使用 border-box 模型，更容易控制元素尺寸 */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+        Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-size: 14px;
+    /* 统一基础字号 */
+    color: #333;
+    /* 默认文字颜色 */
+    line-height: 1.6;
+    /* 设置合适的行高 */
+}
+
+/* 重置常见的块级元素内外边距 */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+ul,
+ol,
+dl,
+dd {
+    margin: 0;
+    padding: 0;
+}
+
+/* 列表无标记 */
+ul,
+ol {
+    list-style: none;
+}
+
+/* 链接基础样式 */
+a {
+    text-decoration: none;
+    /* 去掉下划线 */
+    color: #007bff;
+    /* 设置基础链接颜色 */
+    transition: color 0.3s ease;
+    /* 添加颜色过渡效果 */
+}
+
+a:hover {
+    color: #0056b3;
+    /* 鼠标悬停颜色 */
+}
+
+/* 图片默认行为 */
+img {
+    max-width: 100%;
+    /* 防止图片超出容器 */
+    height: auto;
+    vertical-align: middle;
+    /* 避免图片底部留白 */
+}
+
+/* 容器类 (可选, 如果需要统一内容区域宽度) */
+.container {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+/* NProgress 进度条样式自定义 (可选) */
+#nprogress .bar {
+    background: #ff6347 !important;
+    /* 使用主题色 */
+    height: 3px !important;
+}
