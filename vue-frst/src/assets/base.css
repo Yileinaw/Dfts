@@ -1,0 +1,10 @@
+/* Cleared by AI Assistant - Original Vite template styles removed */
+
+/* Add a light background color to the body */
+body {
+  background-color: #f0f2f5; /* Example light gray color */
+  margin: 0; /* Ensure no default body margin */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; /* Example modern font stack */
+}
+
+/* You might have other base styles here */

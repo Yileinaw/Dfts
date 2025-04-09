@@ -1,0 +1,47 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Ignored specific to vue-frst subdirectory
+vue-frst/node_modules
+vue-frst/.DS_Store
+vue-frst/dist
+vue-frst/dist-ssr
+vue-frst/coverage
+vue-frst/*.local
+
+vue-frst/cypress/videos/
+vue-frst/cypress/screenshots/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+vue-frst/.vscode/*
+!vue-frst/.vscode/extensions.json
+.idea
+vue-frst/.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+vue-frst/*.tsbuildinfo
+
+# Environment variables (in vue-frst)
+vue-frst/.env
+vue-frst/.env.*
+!vue-frst/.env.example
+
+# Ignore top-level build/dist artifacts if any
+/dist
+/coverage
+
+# Ignore OS generated files
+.DS_Store
+Thumbs.db
