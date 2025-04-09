@@ -2,7 +2,14 @@
   <el-container class="main-layout">
     <AppHeader />
     <el-main class="main-content">
-      <router-view /> <!-- 页面内容将在这里渲染 -->
+      <!-- Wrap router-view with keep-alive and transition -->
+      <router-view v-slot="{ Component }">
+        <keep-alive include="HomeView,DiscoverView,CommunityView,MyPostsView,MyFavoritesView">
+          <transition name="fade" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </keep-alive>
+      </router-view>
     </el-main>
     <AppFooter />
   </el-container>
@@ -22,9 +29,22 @@ import AppFooter from './Footer.vue'
 
 .main-content {
   flex-grow: 1; // 让主内容区域填充可用空间
-  // padding: 20px; // 移除这里的内边距
-  // 可以根据需要设置最大宽度并居中
-  // max-width: 1200px;
-  // margin: 0 auto;
+  // Add max-width, centering, and padding for better layout on wide screens
+  max-width: 1200px;
+  width: 100%; // Ensure it takes full width up to max-width
+  margin-left: auto;
+  margin-right: auto;
+  padding: 20px; // Add padding around the content area
+}
+
+/* Define transition styles */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s ease; /* Adjust timing as needed */
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style> 

@@ -23,6 +23,8 @@ export interface Post {
     likesCount?: number; // Add likes count (optional for safety)
     isLiked?: boolean;   // Add isLiked status (optional)
     commentsCount?: number; // Add comments count
+    favoritesCount?: number; // Add favorites count (optional)
+    isFavorited?: boolean;  // Add isFavorited status (optional)
 }
 
 // Add Comment interface
@@ -34,4 +36,21 @@ export interface Comment {
     authorId: number;
     postId: number;
     author?: Pick<User, 'id' | 'name'>; // Include author info for display
-} 
+}
+
+// --- Add Notification Interface --- 
+export interface Notification {
+    id: number;
+    recipientId: number;
+    actorId: number;
+    type: string; // Use string here, enum defined in service
+    postId: number;
+    commentId: number | null;
+    read: boolean;
+    createdAt: string;
+    // Optional: Include related data directly if the API always provides it
+    actor?: { id: number; name: string | null };
+    post?: { id: number; title: string };
+    comment?: { id: number; text: string };
+}
+// --- End Notification Interface --- 

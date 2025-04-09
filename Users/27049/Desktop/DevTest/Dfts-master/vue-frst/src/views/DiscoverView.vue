@@ -142,6 +142,12 @@ const handlePageChange = (page: number) => {
 
 </script>
 
+<script lang="ts">
+export default {
+  name: 'DiscoverView'
+}
+</script>
+
 <style scoped lang="scss">
 .discover-view {
   padding-top: 30px;

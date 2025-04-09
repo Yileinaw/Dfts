@@ -5,6 +5,7 @@ import { LikeController } from '../controllers/LikeController'; // Import LikeCo
 import { CommentController } from '../controllers/CommentController'; // Import CommentController
 import { AuthMiddleware } from '../middleware/AuthMiddleware'; // 导入认证中间件
 import { OptionalAuthMiddleware } from '../middleware/OptionalAuthMiddleware'; // Import optional auth
+import { FavoriteController } from '../controllers/FavoriteController'; // Import FavoriteController
 
 const postRouter = Router();
 
@@ -37,6 +38,14 @@ postRouter.post('/:postId/like', AuthMiddleware, LikeController.likePost);
 
 // DELETE /api/posts/:postId/like - Requires Auth
 postRouter.delete('/:postId/like', AuthMiddleware, LikeController.unlikePost);
+
+// --- Favorite Routes ---
+// POST /api/posts/:postId/favorite - Requires Auth
+postRouter.post('/:postId/favorite', AuthMiddleware, FavoriteController.favoritePost);
+
+// DELETE /api/posts/:postId/favorite - Requires Auth
+postRouter.delete('/:postId/favorite', AuthMiddleware, FavoriteController.unfavoritePost);
+// --- End Favorite Routes ---
 
 // --- Separate Comment Deletion Route ---
 const commentRouter = Router();

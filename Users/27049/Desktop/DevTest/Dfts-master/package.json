@@ -1,0 +1,6 @@
+{
+	"dependencies": {
+		"marked": "^15.0.8",
+		"@types/marked": "^6.0.0"
+	}
+}

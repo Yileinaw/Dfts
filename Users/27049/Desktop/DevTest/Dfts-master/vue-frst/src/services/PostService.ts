@@ -43,6 +43,12 @@ interface CreateCommentResponse {
     comment: Comment;
 }
 
+// Define type for paginated posts response
+interface PaginatedPostsResponse {
+    posts: Post[];
+    totalCount: number;
+}
+
 export const PostService = {
     // 创建帖子 (需要认证)
     async createPost(data: CreatePostData): Promise<PostMutationResponse> {
@@ -74,7 +80,7 @@ export const PostService = {
         return response.data; // 后端返回了被删除的帖子信息
     },
 
-    // --- Add Like/Unlike functions --- 
+    // --- Like/Unlike functions ---
     async likePost(postId: number): Promise<void> { // Returns 204 No Content
         await http.post(`/posts/${postId}/like`);
     },
@@ -83,7 +89,17 @@ export const PostService = {
         await http.delete(`/posts/${postId}/like`);
     },
 
-    // --- Add Comment functions ---
+    // --- Add Favorite/Unfavorite functions ---
+    async favoritePost(postId: number): Promise<void> {
+        await http.post(`/posts/${postId}/favorite`);
+    },
+
+    async unfavoritePost(postId: number): Promise<void> {
+        await http.delete(`/posts/${postId}/favorite`);
+    },
+    // --- End Add Favorite/Unfavorite functions ---
+
+    // --- Comment functions ---
 
     /**
      * Get comments for a specific post.
@@ -113,4 +129,12 @@ export const PostService = {
     //   const response = await http.put<{message: string, user: Omit<User, 'password'>}>('/users/profile', data);
     //   return response.data;
     // }
-}; 
+
+    // --- Add method to get current user's posts --- 
+    async getMyPosts(params?: { page?: number; limit?: number }): Promise<PaginatedPostsResponse> {
+        // Call GET /api/users/me/posts
+        const response = await http.get<PaginatedPostsResponse>('/users/me/posts', { params });
+        return response.data;
+    }
+    // --- End add method ---
+};

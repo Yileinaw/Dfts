@@ -25,7 +25,7 @@
          <el-row :gutter="20">
              <!-- *** 修改：使用 posts 替代 communityPosts *** -->
              <el-col :span="24" v-for="post in posts" :key="post.id">
-                <ShareCard :post="post" @like="handleLike" @comment="handleComment" @favorite="handleFavorite" @update:post="handlePostUpdate" />
+                <ShareCard :post="post" @like="handleLike" @comment="openPostDetailModal" @favorite="handleFavorite" @update:post="handlePostUpdate" />
               </el-col>
          </el-row>
          <!-- *** 修改：更新空状态的 v-if 条件 *** -->
@@ -49,6 +49,13 @@
      <!-- *** 引入 PostEditor 组件 *** -->
      <PostEditor v-model:visible="isEditorVisible" @post-created="handlePostCreated" />
 
+     <!-- Add Post Detail Modal -->
+     <PostDetailModal 
+         :post-id="selectedPostId" 
+         v-model:visible="isModalVisible"
+         @postUpdated="handlePostUpdate" 
+     />
+
   </div>
 </template>
 
@@ -66,6 +73,7 @@ import PostEditor from '@/components/features/PostEditor.vue';
 // --- 新增导入 ---
 import { useUserStore } from '@/stores/modules/user';
 import { useRouter } from 'vue-router'; // 导入 useRouter
+import PostDetailModal from '@/components/common/PostDetailModal.vue'; // Import the modal
 
 const activeTab = ref('latest')
 
@@ -81,6 +89,11 @@ const pagination = reactive({
   pageSize: 10, // 或从配置/用户选择获取
   total: 0
 })
+
+// --- Add Modal State --- 
+const selectedPostId = ref<number | null>(null);
+const isModalVisible = ref(false);
+// --- End Modal State ---
 
 // --- 移除模拟数据 ---
 /*
@@ -159,21 +172,36 @@ const handlePostCreated = () => {
 const handleLike = (id: number | string) => {
   console.log('Liked post:', id)
 }
-const handleComment = (id: number | string) => {
-  console.log('Comment on post:', id)
+
+// --- Modify handleComment to open modal --- 
+const openPostDetailModal = (postId: number) => {
+    console.log('Opening modal for post in CommunityView:', postId);
+    if (typeof postId === 'number') {
+        selectedPostId.value = postId;
+        isModalVisible.value = true;
+    } else {
+        console.error('Invalid postId received from ShareCard:', postId);
+    }
 }
+// --- End modify handleComment ---
+
 const handleFavorite = (id: number | string) => {
   console.log('Favorited post:', id)
 }
 
-// --- Add function to handle post update from ShareCard ---
 const handlePostUpdate = (updatedPost: Post) => {
   const index = posts.value.findIndex(p => p.id === updatedPost.id);
   if (index !== -1) {
-    posts.value[index] = updatedPost;
+    posts.value[index] = { ...posts.value[index], ...updatedPost }; // Merge updates
   }
 };
 
+</script>
+
+<script lang="ts">
+export default {
+  name: 'CommunityView'
+}
 </script>
 
 <style scoped lang="scss">

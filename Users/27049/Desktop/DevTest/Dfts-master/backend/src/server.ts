@@ -1,36 +1,76 @@
+// Restore original server.ts structure
 import express, { Express, Request, Response } from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import authRoutes from './routes/AuthRoutes'; // 导入认证路由
-import userRoutes from './routes/UserRoutes'; // 导入用户路由
-import { postRouter, commentRouter } from './routes/PostRoutes'; // 导入帖子路由和评论路由
-import feedRoutes from './routes/FeedRoutes'; // 导入 Feed 路由
+import authRoutes from './routes/AuthRoutes'; 
+import userRoutes from './routes/UserRoutes'; 
+import { postRouter, commentRouter } from './routes/PostRoutes'; 
+import feedRoutes from './routes/FeedRoutes'; 
+import notificationRoutes from './routes/NotificationRoutes'; // 导入通知路由
+// --- Remove direct imports, rely on userRoutes ---
+// import { UserController } from './controllers/UserController'; 
+// import { AuthMiddleware } from './middleware/AuthMiddleware';
+// --- End Remove ---
 
-dotenv.config(); // 加载 .env 文件中的环境变量
+console.log("--- RUNNING FULL SERVER.TS ---"); // Update log message
+
+dotenv.config(); 
 
 const app: Express = express();
-const port = process.env.PORT || 3001; // 从环境变量或默认使用 3001 端口
+const port = process.env.PORT || 3001; 
 
-// 中间件
-app.use(cors()); // 启用 CORS
-app.use(express.json()); // 解析 JSON 请求体
-app.use(express.urlencoded({ extended: true })); // 解析 URL 编码的请求体
+// --- Restore Middlewares ---
+app.use((req, res, next) => {
+  console.log(`[Request Logger]: ${req.method} ${req.originalUrl}`);
+  next(); 
+});
+// Explicitly configure CORS
+app.use(cors({
+  origin: 'http://localhost:5173', // Allow requests from your frontend origin
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], // Allow necessary methods
+  allowedHeaders: ['Content-Type', 'Authorization'], // Allow necessary headers
+  credentials: true // Allow cookies if needed later
+}));
+app.use(express.json()); 
+app.use(express.urlencoded({ extended: true })); 
+// --- End Restore Middlewares ---
 
-// 基础路由
+// --- Remove direct route definitions --- 
+// app.get('/api/users/me/posts', ...); 
+// app.get('/api/users/me', ...); 
+// app.put('/api/users/profile', ...); 
+// --- End Remove ---
+
+// 基础路由 (Keep)
 app.get('/', (req: Request, res: Response) => {
     res.send('TDFRS Backend API is running!');
 });
 
-// 挂载认证路由
-app.use('/api/auth', authRoutes); // 所有认证相关的路由都在 /api/auth 下
-app.use('/api/users', userRoutes); // 所有用户相关的路由都在 /api/users 下
-app.use('/api/posts', postRouter);       // Mount post-related routes (includes creating/getting comments)
-app.use('/api/comments', commentRouter); // Mount comment deletion route
-app.use('/api/feed', feedRoutes); // 所有 Feed 相关的路由都在 /api/feed 下
+// --- Restore Route Mounts ---
+console.log('[server.ts] Mounting /api/auth routes...');
+app.use('/api/auth', authRoutes);
 
-// 启动服务器
+console.log('[server.ts] Mounting /api/users routes...');
+app.use('/api/users', (req, res, next) => { // Keep the logger middleware for /api/users
+    console.log(`[server.ts] Request to /api/users path: ${req.originalUrl}`);
+    next(); 
+}, userRoutes); // Restore mounting userRoutes
+
+console.log('[server.ts] Mounting /api/posts routes...'); 
+app.use('/api/posts', postRouter);
+
+console.log('[server.ts] Mounting /api/comments routes...');
+app.use('/api/comments', commentRouter);
+
+console.log('[server.ts] Mounting /api/feed routes...');
+app.use('/api/feed', feedRoutes);
+
+console.log('[server.ts] Mounting /api/notifications routes...'); // 添加日志
+app.use('/api/notifications', notificationRoutes); // 挂载通知路由
+// --- End Restore Route Mounts ---
+
 app.listen(port, () => {
     console.log(`[server]: Server is running at http://localhost:${port}`);
 });
 
-export default app; // 导出 app 实例，方便测试 
+export default app; 

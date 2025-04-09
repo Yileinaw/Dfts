@@ -1,16 +1,17 @@
 import { Response } from 'express';
 import { UserService } from '../services/UserService';
 import { AuthenticatedRequest } from '../middleware/AuthMiddleware'; // 导入扩展后的 Request 类型
+import { PostService } from '../services/PostService';
 
 export class UserController {
     // 处理获取当前登录用户信息的请求
     public static async getCurrentUser(req: AuthenticatedRequest, res: Response): Promise<void> {
+        console.log('[UserController] Reached getCurrentUser handler'); // <-- Add log
         try {
-            // 从认证中间件获取 userId (如果中间件验证成功，userId 一定存在)
             const userId = req.userId;
-
+            console.log(`[UserController - getCurrentUser] userId: ${userId}`); // <-- Add log
             if (!userId) {
-                // 理论上如果认证中间件正确执行，这里不会发生
+                console.error('[UserController - getCurrentUser] Error: userId is missing'); // <-- Add log
                 res.status(401).json({ message: 'Unauthorized: User ID not found after authentication' });
                 return;
             }
@@ -59,6 +60,40 @@ export class UserController {
             }
         }
     }
+
+    // --- Add method to get current user's posts --- 
+    public static async getMyPosts(req: AuthenticatedRequest, res: Response): Promise<void> {
+        console.log('[UserController] Reached getMyPosts handler'); 
+        try {
+            const userId = req.userId;
+            console.log(`[UserController] userId: ${userId}`); 
+            if (!userId) {
+                console.error('[UserController] Error: userId is missing after AuthMiddleware');
+                res.status(401).json({ message: 'Unauthorized: User ID not found' });
+                return;
+            }
+            
+            const page = parseInt(req.query.page as string) || 1; 
+            const limit = parseInt(req.query.limit as string) || 10; 
+            console.log(`[UserController] Fetching posts for user ${userId}, page: ${page}, limit: ${limit}`); // <-- Add log
+
+            // Call PostService.getAllPosts with authorId filter
+            const result = await PostService.getAllPosts({ 
+                page,
+                limit, 
+                authorId: userId,
+                currentUserId: userId 
+             });
+            console.log(`[UserController] PostService returned ${result.posts.length} posts, totalCount: ${result.totalCount}`); // <-- Add log
+
+            res.status(200).json(result); 
+
+        } catch (error: any) {
+            console.error('[UserController] Get My Posts Error:', error);
+            res.status(500).json({ message: 'Internal server error retrieving your posts' });
+        }
+    }
+    // --- End add method ---
 
     // 未来可以在这里添加更新用户等控制器方法
 } 

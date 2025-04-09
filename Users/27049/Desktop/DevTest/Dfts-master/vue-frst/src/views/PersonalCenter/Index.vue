@@ -6,11 +6,23 @@
         :default-active="$route.path" 
         class="sidebar-menu"
       >
-        <el-menu-item index="/personal">
+        <el-menu-item index="/personal-center/profile">
           <el-icon><UserFilled /></el-icon>
           <span>个人信息</span>
         </el-menu-item>
-        <el-menu-item index="/personal/settings">
+        <el-menu-item index="/personal-center/favorites">
+          <el-icon><Star /></el-icon>
+          <span>我的收藏</span>
+        </el-menu-item>
+        <el-menu-item index="/personal-center/my-posts">
+          <el-icon><Document /></el-icon>
+          <span>我的帖子</span>
+        </el-menu-item>
+        <el-menu-item index="/personal-center/notifications">
+          <el-icon><Bell /></el-icon>
+          <span>消息通知</span>
+        </el-menu-item>
+        <el-menu-item index="/personal-center/settings">
           <el-icon><Setting /></el-icon>
           <span>账号设置</span>
         </el-menu-item>
@@ -18,16 +30,40 @@
     </el-aside>
     <el-main class="content">
       <router-view v-slot="{ Component }">
-         <transition name="fade" mode="out-in">
+         <!-- Temporarily disable transition -->
+         <!-- <transition name="fade" mode="out-in"> -->
             <component :is="Component" />
-          </transition>
+          <!-- </transition> -->
       </router-view> 
     </el-main>
   </el-container>
 </template>
 
-<script setup>
-import { UserFilled, Setting } from '@element-plus/icons-vue'
+<script setup lang="ts">
+import { UserFilled, Setting, Star, Document, Bell } from '@element-plus/icons-vue'
+import { useRouter, useRoute } from 'vue-router'
+import { onMounted, watch } from 'vue'
+
+const router = useRouter()
+const route = useRoute()
+
+// Function to check route and redirect if necessary
+const checkAndRedirect = () => {
+  // Check if the current path is exactly the base personal center path
+  if (route.path === '/personal-center') {
+    console.log('Current path is /personal-center, redirecting to profile...');
+    router.replace('/personal-center/profile'); // Use replace to avoid history entry
+  }
+}
+
+// Check on component mount
+onMounted(() => {
+  checkAndRedirect();
+})
+
+// Also watch for route changes, although less likely needed for initial load
+// watch(() => route.path, checkAndRedirect);
+
 </script>
 
 <style scoped lang="scss">

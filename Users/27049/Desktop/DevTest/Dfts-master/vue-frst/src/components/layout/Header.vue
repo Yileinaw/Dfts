@@ -1,36 +1,39 @@
 <template>
   <el-header class="header">
-    <div class="logo" @click="goToHome">
-      <!-- 稍后替换为真实 logo -->
-      <!-- <img src="@/assets/images/logo.png" alt="美食分享 Logo" /> -->
-      <span>美食分享</span>
-    </div>
-    <el-menu mode="horizontal" router :default-active="$route.path" class="nav-menu">
-      <el-menu-item index="/">主页</el-menu-item>
-      <el-menu-item index="/discover">发现美食</el-menu-item>
-      <el-menu-item index="/community">美食社区</el-menu-item>
-    </el-menu>
-    <div class="user-section">
-      <!-- 根据登录状态显示不同内容 -->
-      <template v-if="!userStore.isLoggedIn">
-        <el-button type="primary" @click="goToLogin">登录</el-button>
-        <el-button @click="goToRegister">注册</el-button>
-      </template>
-      <template v-else>
-         <el-dropdown>
-            <span class="el-dropdown-link">
-              <el-avatar :size="32" :src="userStore.userAvatar || defaultAvatar" /> 
-              <span class="username">{{ userStore.userName }}</span>
-              <el-icon class="el-icon--right"><arrow-down /></el-icon>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item @click="goToProfile">个人中心</el-dropdown-item>
-                <el-dropdown-item divided @click="handleLogout">退出登录</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-      </template>
+    <!-- Add inner container for content alignment -->
+    <div class="header-content">
+      <div class="logo" @click="goToHome">
+        <!-- 稍后替换为真实 logo -->
+        <!-- <img src="@/assets/images/logo.png" alt="美食分享 Logo" /> -->
+        <span>美食分享</span>
+      </div>
+      <el-menu mode="horizontal" router :default-active="$route.path" class="nav-menu">
+        <el-menu-item index="/">主页</el-menu-item>
+        <el-menu-item index="/discover">发现美食</el-menu-item>
+        <el-menu-item index="/community">美食社区</el-menu-item>
+      </el-menu>
+      <div class="user-section">
+        <!-- 根据登录状态显示不同内容 -->
+        <template v-if="!userStore.isLoggedIn">
+          <el-button type="primary" @click="goToLogin">登录</el-button>
+          <el-button @click="goToRegister">注册</el-button>
+        </template>
+        <template v-else>
+           <el-dropdown>
+              <span class="el-dropdown-link">
+                <el-avatar :size="32" :src="userStore.userAvatar || defaultAvatar" /> 
+                <span class="username">{{ userStore.userName }}</span>
+                <el-icon class="el-icon--right"><arrow-down /></el-icon>
+              </span>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item @click="goToProfile">个人中心</el-dropdown-item>
+                  <el-dropdown-item divided @click="handleLogout">退出登录</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+        </template>
+      </div>
     </div>
   </el-header>
 </template>
@@ -57,7 +60,7 @@ const goToRegister = () => {
 }
 
 const goToProfile = () => {
-  router.push('/personal') // 跳转到个人中心根路径
+  router.push('/personal-center') // 跳转到个人中心根路径
 }
 
 // 处理登出
@@ -70,13 +73,25 @@ const handleLogout = () => {
 
 <style scoped lang="scss">
 .header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 50px; 
+  // Remove flex layout and padding from the main header element
+  // display: flex;
+  // align-items: center;
+  // justify-content: space-between;
+  // padding: 0 50px; 
   border-bottom: 1px solid var(--el-border-color-light);
   background-color: #fff;
   height: 60px;
+  width: 100%; // Ensure it spans full width
+}
+
+// New container for inner content
+.header-content {
+    max-width: 1200px; // Match main content max-width
+    margin: 0 auto; // Center the content
+    display: flex;
+    align-items: center;
+    height: 100%; // Occupy full header height
+    padding: 0 20px; // Add horizontal padding inside the content area
 }
 
 .logo {
@@ -96,7 +111,7 @@ const handleLogout = () => {
 
 .nav-menu {
   border-bottom: none; 
-  flex-grow: 1; 
+  flex-grow: 1; // Restore flex-grow to fill space
   margin: 0 40px; 
   height: 100%; // 确保菜单项垂直居中
 

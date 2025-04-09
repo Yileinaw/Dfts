@@ -16,7 +16,7 @@
       <el-tab-pane label="基本信息" name="info">
          <el-descriptions :column="1" border class="info-descriptions">
             <el-descriptions-item label="用户ID">{{ userStore.currentUser?.id || 'N/A' }}</el-descriptions-item>
-            <el-descriptions-item label="昵称">{{ userStore.currentUser?.nickname || 'N/A' }}</el-descriptions-item>
+            <el-descriptions-item label="昵称">{{ userStore.currentUser?.name || 'N/A' }}</el-descriptions-item>
             <el-descriptions-item label="邮箱">{{ userStore.currentUser?.email || 'N/A' }}</el-descriptions-item>
             <!-- Add more user info fields if available -->
           </el-descriptions>
@@ -25,7 +25,7 @@
       <el-tab-pane label="编辑资料" name="edit">
          <el-form :model="profileForm" label-width="80px" class="edit-form">
             <el-form-item label="昵称">
-              <el-input v-model="profileForm.nickname"></el-input>
+              <el-input v-model="profileForm.name"></el-input>
             </el-form-item>
             <el-form-item label="邮箱">
               <el-input v-model="profileForm.email" disabled></el-input>
@@ -41,49 +41,47 @@
   </el-card>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useUserStore } from '@/stores/modules/user' // 引入 User Store
 import defaultAvatar from '@/assets/images/default-avatar.png' // 引入默认头像
 import { ElMessage } from 'element-plus'
+import { UserService } from '@/services/UserService' // 导入 UserService
 
 const userStore = useUserStore()
 const loading = ref(false)
 const activeTab = ref('info') // Default to info tab
 
 const profileForm = reactive({
-  nickname: '',
+  name: '',
   email: ''
 })
 
 // 在组件挂载时，用当前用户信息填充表单
 onMounted(() => {
   if (userStore.currentUser) {
-    profileForm.nickname = userStore.currentUser.nickname
+    profileForm.name = userStore.currentUser.name || ''
     profileForm.email = userStore.currentUser.email
   }
 })
 
-// 更新个人信息 (模拟)
+// 更新个人信息
 const updateProfile = async () => {
   loading.value = true
-  console.log('Updating profile:', profileForm)
+  console.log('Updating profile:', { name: profileForm.name })
   try {
-    // TODO: Call actual API to update profile, e.g., userStore.updateProfile({ nickname: profileForm.nickname })
-    await new Promise(resolve => setTimeout(resolve, 500)) // Simulate API call
+    // Call actual API to update profile
+    const updatedUser = await UserService.updateProfile({ name: profileForm.name });
     
-    // Update store state after successful API call (assuming API returns updated info or we manually update)
-    // This part needs adjustment based on actual API response/logic
-     if (userStore.currentUser) { // Check if currentUser exists
-        const updatedUserInfo = { ...userStore.currentUser, nickname: profileForm.nickname };
-        userStore.setLoginInfo(userStore.token, updatedUserInfo); // Update store and localStorage
-     }
+    // Update store state after successful API call
+    userStore.setUser(updatedUser); // Use setUser from store to update currentUser
 
     ElMessage.success('个人信息更新成功')
     activeTab.value = 'info' // Switch back to info tab after saving
-  } catch (error) {
+  } catch (error: any) {
     console.error('Profile update failed:', error)
-    ElMessage.error('更新失败，请稍后重试')
+    // Display backend error message if available
+    ElMessage.error(error.response?.data?.message || '更新失败，请稍后重试')
   } finally {
     loading.value = false
   }

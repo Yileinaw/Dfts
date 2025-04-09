@@ -1,6 +1,6 @@
 // backend/src/services/CommentService.ts
 import prisma from '../db';
-import { Comment, Prisma } from '@prisma/client';
+import { Comment, Post, Prisma } from '@prisma/client';
 
 interface PaginatedCommentsResponse {
     comments: (Comment & { author: { id: number, name: string | null } })[]; // Include author name
@@ -17,8 +17,8 @@ export class CommentService {
             throw new Error('Comment text cannot be empty');
         }
 
-        // Use transaction to ensure comment creation and count update are atomic
-        const newComment = await prisma.$transaction(async (tx) => {
+        // Use transaction to ensure comment creation, count update, and notification
+        const [newComment, post] = await prisma.$transaction(async (tx) => {
             const comment = await tx.comment.create({
                 data: {
                     text: text,
@@ -27,13 +27,33 @@ export class CommentService {
                 },
             });
 
-            await tx.post.update({
+            const updatedPost = await tx.post.update({
                 where: { id: postId },
                 data: { commentsCount: { increment: 1 } },
+                select: { authorId: true } // Select authorId for notification
             });
 
-            return comment;
+            return [comment, updatedPost];
         });
+        
+        // --- Create Notification --- 
+        if (post && post.authorId !== userId) { // Don't notify self
+             try {
+                await prisma.notification.create({
+                    data: {
+                        recipientId: post.authorId,
+                        actorId: userId,
+                        postId: postId,
+                        commentId: newComment.id, // Link to the created comment
+                        type: 'COMMENT' // Correct type
+                    }
+                });
+                 console.log(`[Notification] COMMENT notification created for post ${postId}, recipient ${post.authorId}`);
+            } catch (error) {
+                console.error(`[Notification Error] Failed to create COMMENT notification for post ${postId}:`, error);
+            }
+        }
+        // --- End Create Notification ---
 
         return newComment;
     }

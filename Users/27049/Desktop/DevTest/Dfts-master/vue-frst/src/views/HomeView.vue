@@ -42,7 +42,7 @@
             <ShareCard
               :post="share"
               @like="handleLike"
-              @comment="handleComment"
+              @comment="openPostDetailModal"
               @favorite="handleFavorite"
               @update:post="handlePostUpdate"
             />
@@ -54,6 +54,14 @@
         </div>
       </section>
     </div>
+
+    <!-- Add Post Detail Modal -->
+    <PostDetailModal 
+        :post-id="selectedPostId" 
+        v-model:visible="isModalVisible"
+        @postUpdated="handlePostUpdate" 
+    />
+
   </div>
 </template>
 
@@ -64,6 +72,7 @@ import { Search, Star, ChatLineSquare } from '@element-plus/icons-vue' // 引入
 // 引入通用组件
 import FoodCard from '@/components/common/FoodCard.vue'
 import ShareCard from '@/components/common/ShareCard.vue'
+import PostDetailModal from '@/components/common/PostDetailModal.vue'; // Import the modal component
 // --- 新增导入 ---
 import { PostService } from '@/services/PostService'
 import type { Post } from '@/types/models' // 导入 Post 类型
@@ -74,6 +83,11 @@ const router = useRouter()
 const latestShares = ref<Post[]>([]) // 存储从 API 获取的帖子
 const isLoadingShares = ref(false)
 const sharesError = ref<string | null>(null)
+
+// --- Add Modal State --- 
+const selectedPostId = ref<number | null>(null);
+const isModalVisible = ref(false);
+// --- End Modal State ---
 
 // --- 模拟数据 --- 
 const recommendedItems = ref([
@@ -110,8 +124,7 @@ onMounted(() => {
 const handlePostUpdate = (updatedPost: Post) => {
   const index = latestShares.value.findIndex(p => p.id === updatedPost.id);
   if (index !== -1) {
-    // 直接替换整个对象以确保响应性
-    latestShares.value[index] = updatedPost;
+    latestShares.value[index] = { ...latestShares.value[index], ...updatedPost }; // Merge updates
   }
 };
 
@@ -123,12 +136,21 @@ const handleViewDetails = (id: number | string) => {
 const handleLike = (id: number | string) => {
   console.log('HomeView received like event for post:', id) // 可以移除，因为 ShareCard 处理了
 }
-const handleComment = (id: number | string) => {
-  console.log('HomeView received comment event for post:', id)
-}
 const handleFavorite = (id: number | string) => {
   console.log('HomeView received favorite event for post:', id)
 }
+
+// --- Modify handleComment to open modal --- 
+const openPostDetailModal = (postId: number) => {
+    console.log('Opening modal for post:', postId);
+    if (typeof postId === 'number') {
+        selectedPostId.value = postId;
+        isModalVisible.value = true;
+    } else {
+        console.error('Invalid postId received from ShareCard:', postId);
+    }
+}
+// --- End modify handleComment ---
 
 // --- 导航方法 --- 
 const goToDiscover = () => {
@@ -138,6 +160,13 @@ const goToCommunity = () => {
   router.push('/community')
 }
 
+</script>
+
+// Add a separate script block to define the component name
+<script lang="ts">
+export default {
+  name: 'HomeView'
+}
 </script>
 
 <style scoped lang="scss">

@@ -1,4 +1,4 @@
-import './assets/main.css'
+import './assets/base.css'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
@@ -17,3 +17,7 @@ app.use(router)
 app.use(ElementPlus) // 注册 Element Plus
 
 app.mount('#app')
+
+// --- Remove debugging line ---
+// console.log('Registered Routes:', router.getRoutes());
+// --- End debugging line ---
