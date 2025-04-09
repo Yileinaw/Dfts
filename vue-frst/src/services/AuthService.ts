@@ -15,7 +15,7 @@ interface LoginData {
 }
 
 // 定义登录响应的数据类型 (根据后端返回)
-interface LoginResponse {
+export interface LoginResponse {
     message: string;
     token: string;
     user: Omit<User, 'password'>; // 假设后端返回不含密码的用户信息

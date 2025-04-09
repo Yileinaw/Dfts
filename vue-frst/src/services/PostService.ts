@@ -103,16 +103,19 @@ export const PostService = {
 
     /**
      * Get comments for a specific post.
+     * Returns an array of Comment objects.
      */
-    async getCommentsByPostId(postId: number, params?: { page?: number; limit?: number }): Promise<GetCommentsResponse> {
-        const response = await http.get<GetCommentsResponse>(`/posts/${postId}/comments`, { params });
+    async getCommentsByPostId(postId: number): Promise<Comment[]> {
+        // Backend now returns the array directly
+        const response = await http.get<Comment[]>(`/posts/${postId}/comments`);
         return response.data;
     },
 
     /**
-     * Create a new comment for a post.
+     * Create a new comment or reply for a post.
+     * Requires text and optionally parentId.
      */
-    async createComment(postId: number, data: { text: string }): Promise<CreateCommentResponse> {
+    async createComment(postId: number, data: { text: string; parentId?: number | null }): Promise<CreateCommentResponse> {
         const response = await http.post<CreateCommentResponse>(`/posts/${postId}/comments`, data);
         return response.data;
     },

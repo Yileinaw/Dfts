@@ -39,7 +39,7 @@
               <component :is="getNotificationIcon(notification.type)" />
           </el-icon>
           <!-- Always use defaultAvatar for actor -->
-          <el-avatar :size="36" :src="defaultAvatar" class="actor-avatar" />
+          <el-avatar :size="36" :src="resolveStaticAssetUrl(notification.actor?.avatarUrl)" class="actor-avatar" />
           <!-- Main Content -->
           <div class="content">
              <span class="actor-name">{{ notification.actor?.name || '用户' }}</span>
@@ -81,8 +81,8 @@ import { ref, onMounted, reactive, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Bell, Delete, Pointer, ChatDotRound, Star } from '@element-plus/icons-vue';
 import { ElEmpty, ElSkeleton, ElAlert, ElPagination, ElButton, ElPopconfirm, ElMessage, ElAvatar, ElIcon, ElTooltip, ElMessageBox } from 'element-plus';
-import defaultAvatar from '@/assets/images/default-avatar.png';
 import { NotificationService, type NotificationWithRelations, NotificationType } from '@/services/NotificationService';
+import { resolveStaticAssetUrl } from '@/utils/urlUtils';
 
 const notifications = ref<NotificationWithRelations[]>([]);
 const isLoading = ref(true);
@@ -232,8 +232,8 @@ const clearAll = async () => {
     }
 };
 
-const goToPost = (postId: number | undefined) => {
-    if (postId === undefined || postId === -1) {
+const goToPost = (postId: number | null | undefined) => {
+    if (postId === undefined || postId === null || postId === -1) {
         ElMessage.warning('关联的帖子不存在或已被删除');
         return;
     }

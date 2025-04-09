@@ -57,7 +57,7 @@ class PostController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const postId = parseInt(req.params.id, 10);
-                const currentUserId = req.userId; // Get userId from AuthMiddleware (if logged in)
+                const currentUserId = req.userId; // Get current user ID from authenticated request
                 if (isNaN(postId)) {
                     res.status(400).json({ message: 'Invalid post ID' });
                     return;
@@ -65,14 +65,13 @@ class PostController {
                 const post = yield PostService_1.PostService.getPostById(postId, currentUserId);
                 if (!post) {
                     res.status(404).json({ message: 'Post not found' });
+                    return;
                 }
-                else {
-                    res.status(200).json({ post });
-                }
+                res.status(200).json({ post });
             }
             catch (error) {
                 console.error('Get Post By ID Error:', error);
-                res.status(500).json({ message: 'Internal server error retrieving post' });
+                res.status(500).json({ message: 'Failed to retrieve post' });
             }
         });
     }

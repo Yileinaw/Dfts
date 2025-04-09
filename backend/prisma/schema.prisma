@@ -18,6 +18,7 @@ model User {
   email     String   @unique
   password  String
   name      String?
+  avatarUrl String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   posts     Post[]
@@ -67,6 +68,10 @@ model Comment {
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   postId    Int
   notification Notification?
+
+  parentId  Int?      // Optional ID of the parent comment
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("CommentReplies") // List of replies to this comment
 }
 
 model Favorite {
@@ -84,6 +89,7 @@ enum NotificationType {
   LIKE
   COMMENT
   FAVORITE
+  REPLY
 }
 
 model Notification {

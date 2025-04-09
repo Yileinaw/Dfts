@@ -1,9 +1,26 @@
 import prisma from '../db';
-import { Favorite, Post, Prisma } from '@prisma/client';
+import { Favorite, Post, Prisma, User } from '@prisma/client';
 
-// Define response type for paginated favorite posts
+// console.log('[FavoriteService.ts] File loaded by Node.js process.'); // Remove log
+
+// Define a more specific type for the Author including avatarUrl
+interface AuthorInfo {
+    id: number;
+    name: string | null;
+    avatarUrl?: string | null; // Ensure avatarUrl is here
+}
+
+// Define a type for Post that includes the AuthorInfo
+// This helps ensure type safety throughout the process
+interface PostWithAuthor extends Omit<Post, 'authorId'> { // Omit authorId if author object is present
+    isLiked?: boolean;
+    isFavorited?: boolean;
+    author: AuthorInfo | null; // Use the AuthorInfo interface
+}
+
+// Define the Paginated response type using PostWithAuthor
 interface PaginatedFavoritePostsResponse {
-    posts: (Post & { isLiked?: boolean; isFavorited?: boolean; author?: { id: number, name: string | null } })[];
+    posts: PostWithAuthor[];
     totalCount: number;
 }
 
@@ -45,9 +62,9 @@ export class FavoriteService {
                         type: 'FAVORITE' // Correct type
                     }
                 });
-                 console.log(`[Notification] FAVORITE notification created for post ${postId}, recipient ${post.authorId}`);
+                 // console.log(`[Notification] FAVORITE notification created for post ${postId}, recipient ${post.authorId}`);
             } catch (error) {
-                console.error(`[Notification Error] Failed to create FAVORITE notification for post ${postId}:`, error);
+                // console.error(`[Notification Error] Failed to create FAVORITE notification for post ${postId}:`, error);
             }
         }
         // --- End Create Notification ---
@@ -87,37 +104,36 @@ export class FavoriteService {
     }
 
     /**
-     * Get posts favorited by a specific user with pagination.
+     * NEW method to get posts favorited by a specific user with pagination.
      */
-    public static async getFavoritePostsByUserId(
+    public static async fetchUserFavoritesPage(
         userId: number,
         options: { page?: number, limit?: number } = {}
     ): Promise<PaginatedFavoritePostsResponse> {
+        // console.log(`[FavoriteService.fetchUserFavoritesPage] Fetching favorites for userId: ${userId}, options: ${JSON.stringify(options)}`); // Remove log
         const { page = 1, limit = 10 } = options;
         const skip = (page - 1) * limit;
 
-        // 1. Get the total count of favorited posts by the user
-        const totalCount = await prisma.favorite.count({
-            where: { userId: userId }
-        });
+        // 1. Get total count
+        const totalCount = await prisma.favorite.count({ where: { userId } });
 
-        // 2. Get the paginated list of favorite records for the user
+        // 2. Get paginated favorite records (just post IDs)
         const favoriteRecords = await prisma.favorite.findMany({
-            where: { userId: userId },
+            where: { userId },
             select: { postId: true },
-            orderBy: { createdAt: 'desc' }, // Order by when it was favorited
-            skip: skip,
+            orderBy: { createdAt: 'desc' },
+            skip,
             take: limit,
         });
 
-        // Extract post IDs
         const postIds = favoriteRecords.map(fav => fav.postId);
-
         if (postIds.length === 0) {
+            // console.log(`[FavoriteService.fetchUserFavoritesPage] No favorite post IDs found for userId: ${userId}`); // Remove log
             return { posts: [], totalCount: 0 };
         }
+        // console.log(`[FavoriteService.fetchUserFavoritesPage] Found favorite post IDs: ${postIds}`); // Remove log
 
-        // 3. Fetch the actual post details for the extracted IDs
+        // 3. Fetch post details for these IDs
         const postsData = await prisma.post.findMany({
             where: { id: { in: postIds } },
             select: {
@@ -126,39 +142,67 @@ export class FavoriteService {
                 content: true,
                 createdAt: true,
                 updatedAt: true,
-                authorId: true,
-                author: { select: { id: true, name: true } },
+                authorId: true, // Keep authorId for potential reference if needed
+                author: { 
+                    select: {
+                        id: true,
+                        name: true,
+                        avatarUrl: true
+                    }
+                },
                 likesCount: true,
                 commentsCount: true,
                 favoritesCount: true,
-                // Include relations needed to determine isLiked and isFavorited BY THE REQUESTING USER (userId)
-                likedBy: {
-                    where: { userId: userId },
-                    select: { userId: true }
-                },
-                favoritedBy: {
-                    where: { userId: userId },
-                    select: { userId: true }
-                }
+                // Need relations to determine isLiked/isFavorited for the *requesting user*
+                likedBy: { where: { userId }, select: { userId: true } },
+                favoritedBy: { where: { userId }, select: { userId: true } }
             }
-            // We might need to re-order based on favoriteRecords order if default ordering isn't sufficient
-            // This is complex with Prisma select, might need post-processing or raw query if exact favorite order is critical.
-            // For now, we accept the default ordering of findMany.
         });
         
-        // 4. Process posts to add isLiked and isFavorited flags
-        const posts = postsData.map(post => {
-            const { likedBy, favoritedBy, ...restOfPost } = post as any;
-            const isLiked = !!likedBy && likedBy.length > 0;
-            // Since we are fetching favorites for this user, isFavorited should always be true
-            // However, including the check based on favoritedBy is safer and consistent
-            const isFavorited = !!favoritedBy && favoritedBy.length > 0;
-            return { ...restOfPost, isLiked, isFavorited };
+        // --- Remove Debug Log --- 
+        // console.log('[FavoriteService.fetchUserFavoritesPage] Raw postsData fetched:', JSON.stringify(postsData, null, 2));
+        // --- End Remove Debug Log ---
+        
+        // 4. Map data to the stricter PostWithAuthor type
+        const processedPosts: PostWithAuthor[] = postsData.map(post => {
+            const isLiked = !!post.likedBy?.length;
+            // Since we are fetching *this user's* favorites, isFavorited should be true
+            const isFavorited = true; // Simplification: posts fetched via this method are always favorited by the user
+            // const isFavorited = !!post.favoritedBy?.length; // Original check retained for consistency if needed elsewhere
+            
+            // Create the author object explicitly matching AuthorInfo
+            const authorInfo: AuthorInfo | null = post.author ? {
+                id: post.author.id,
+                name: post.author.name,
+                avatarUrl: post.author.avatarUrl // Directly use the selected value
+            } : null;
+
+            return {
+                id: post.id,
+                title: post.title,
+                content: post.content,
+                createdAt: post.createdAt,
+                updatedAt: post.updatedAt,
+                author: authorInfo,
+                likesCount: post.likesCount,
+                commentsCount: post.commentsCount,
+                favoritesCount: post.favoritesCount,
+                isLiked,
+                isFavorited
+            };
         });
 
-        // Optional: Re-order posts based on the favoriteRecords order if needed
-        const orderedPosts = postIds.map(id => posts.find(p => p.id === id)).filter(p => p !== undefined) as any[];
+        // 5. Re-order based on favoriteRecords order
+        const orderedPosts = postIds
+            .map(id => processedPosts.find(p => p.id === id))
+            .filter((p): p is PostWithAuthor => p !== undefined);
 
+        // console.log(`[FavoriteService.fetchUserFavoritesPage] Returning ${orderedPosts.length} ordered posts.`); // Remove log
         return { posts: orderedPosts, totalCount };
     }
+
+    /**
+     * Get posts favorited by a specific user with pagination.
+     */
+   
 } 

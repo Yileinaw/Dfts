@@ -10,7 +10,11 @@ export enum NotificationType {
 }
 
 export interface NotificationWithRelations extends Notification {
-  actor: { id: number; name: string | null }; 
+  actor: { 
+    id: number; 
+    name: string | null; 
+    avatarUrl: string | null;
+  }; 
   post: { id: number; title: string };       
   comment?: { id: number; text: string };    
 }

@@ -17,4 +17,10 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  // Add server config to disable HMR overlay
+  server: {
+    hmr: {
+      overlay: false
+    }
+  }
 })

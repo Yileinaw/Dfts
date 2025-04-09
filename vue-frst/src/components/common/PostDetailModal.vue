@@ -19,7 +19,7 @@
     />
     <div v-else-if="post" class="modal-content">
         <div class="post-header-modal">
-            <el-avatar :size="40" :src="/* post.author?.avatarUrl || */ defaultAvatar" />
+            <el-avatar :size="40" :src="resolveStaticAssetUrl(post.author?.avatarUrl)" />
             <span class="username">{{ post.author?.name || '匿名用户' }}</span>
             <span class="time">{{ formatTime(post.createdAt) }}</span>
         </div>
@@ -87,7 +87,7 @@
             <ul class="comment-list-modal" v-else-if="comments.length > 0">
               <li v-for="comment in comments" :key="comment.id" class="comment-item-modal">
                 <div class="comment-header-modal">
-                    <el-avatar :size="24" :src="/* comment.author?.avatarUrl || */ defaultAvatar" />
+                    <el-avatar :size="24" :src="resolveStaticAssetUrl(comment.author?.avatarUrl)" />
                     <span class="comment-author">{{ comment.author?.name || '匿名用户' }}</span>
                     <span class="comment-time">{{ formatTime(comment.createdAt) }}</span>
                      <el-button 
@@ -122,11 +122,11 @@
 import { ref, watch, computed } from 'vue';
 import { ElDialog, ElButton, ElSkeleton, ElAlert, ElEmpty, ElInput, ElDivider, ElMessage, ElText, ElAvatar, ElMessageBox } from 'element-plus';
 import { Star, StarFilled } from '@element-plus/icons-vue';
-import defaultAvatar from '@/assets/images/default-avatar.png';
 import { PostService } from '@/services/PostService';
 import type { Post, Comment } from '@/types/models';
 import { useUserStore } from '@/stores/modules/user';
 import { useRouter, useRoute } from 'vue-router'; // Need route for login redirect
+import { resolveStaticAssetUrl } from '@/utils/urlUtils'; // Ensure imported
 
 const props = defineProps<{ 
     postId: number | null; 
@@ -205,8 +205,15 @@ const fetchComments = async (id: number) => {
     loadingComments.value = true;
     commentsError.value = null;
     try {
-        const response = await PostService.getCommentsByPostId(id);
-        comments.value = response.comments || [];
+        const response: any = await PostService.getCommentsByPostId(id);
+        if (response && Array.isArray(response)) {
+             comments.value = response;
+        } else if (response && response.comments && Array.isArray(response.comments)) {
+            comments.value = response.comments;
+        } else {
+            comments.value = [];
+            console.warn('[PostDetailModal] Invalid or empty comments response structure:', response);
+        }
     } catch (err: any) {
         console.error('Failed to fetch comments in modal:', err);
         commentsError.value = err.response?.data?.message || '加载评论时发生错误';

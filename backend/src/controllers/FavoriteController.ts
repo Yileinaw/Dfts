@@ -74,17 +74,15 @@ export class FavoriteController {
             const limit = parseInt(req.query.limit as string) || undefined;
 
             if (!userId) {
-                // This should technically be caught by AuthMiddleware, but double-check
                 res.status(401).json({ message: 'Unauthorized' });
                 return;
             }
 
-            const result = await FavoriteService.getFavoritePostsByUserId(userId, { page, limit });
-            res.status(200).json(result); // Returns { posts: [], totalCount: number }
+            const result = await FavoriteService.fetchUserFavoritesPage(userId, { page, limit });
+            res.status(200).json(result);
 
         } catch (error: any) {
-            console.error('Get My Favorites Error:', error);
-            res.status(500).json({ message: error.message || 'Failed to retrieve favorite posts' });
+            res.status(500).json({ message: 'Failed to retrieve favorite posts' });
         }
     }
 } 

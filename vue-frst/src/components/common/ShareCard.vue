@@ -2,7 +2,7 @@
   <el-card shadow="hover" class="share-card" @click="handleCardClick">
     <template #header>
       <div class="share-header">
-        <el-avatar :size="40" :src="/* post.author?.avatarUrl || */ defaultAvatar" @click.stop="handleAvatarClick" class="clickable-avatar" />
+        <el-avatar :size="40" :src="getAvatarUrl(post.author?.avatarUrl)" @click.stop="handleAvatarClick" class="clickable-avatar" />
         <span class="username">{{ post.author?.name || '匿名用户' }}</span>
         <span class="time">{{ formatTime(post.createdAt) }}</span>
       </div>
@@ -58,11 +58,11 @@
 import { ref } from 'vue'; // Import ref for loading state
 import { ElCard, ElAvatar, ElImage, ElButton, ElMessage } from 'element-plus' // Import ElMessage
 import { Pointer, ChatDotSquare, Star, StarFilled, MoreFilled } from '@element-plus/icons-vue'
-import defaultAvatar from '@/assets/images/default-avatar.png';
 import type { Post } from '@/types/models';
 import { PostService } from '@/services/PostService';
 import { useUserStore } from '@/stores/modules/user';
 import { useRouter } from 'vue-router'; // Import router for navigation
+import { resolveStaticAssetUrl } from '@/utils/urlUtils'; // Import the utility function
 
 const props = defineProps<{ post: Post }>()
 const emit = defineEmits(['like', 'comment', 'favorite', 'update:post']) // Add update:post emit
@@ -71,6 +71,13 @@ const isLiking = ref(false);
 const isFavoriting = ref(false); // Add loading state for favorite
 const userStore = useUserStore();
 const router = useRouter(); // Get router instance
+
+// Wrapper function to be used in the template
+const getAvatarUrl = (url: string | null | undefined): string => {
+  // You can add a default path specific to the card context if needed
+  // e.g., const defaultCardAvatar = '/path/to/card/default.png';
+  return resolveStaticAssetUrl(url /*, defaultCardAvatar */);
+};
 
 const formatTime = (isoString: string): string => {
   if (!isoString) return '未知时间';

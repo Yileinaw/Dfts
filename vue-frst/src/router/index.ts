@@ -1,12 +1,11 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import MainLayout from '@/components/layout/MainLayout.vue'
-// Remove synchronous import for HomeView
-// import HomeView from '@/views/HomeView.vue' 
 import LoginView from '@/views/auth/LoginView.vue' 
 import { useUserStore } from '@/stores/modules/user'
 
-// Remove log
-// console.log('Router file being processed...'); 
+// Import the new layout and view
+import PersonalCenterLayout from '@/views/PersonalCenter/PersonalCenterLayout.vue';
+import MyFavoritesView from '@/views/PersonalCenter/MyFavoritesView.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -18,83 +17,64 @@ const router = createRouter({
         {
           path: '',
           name: 'Home',
-          component: () => import('@/views/HomeView.vue') // Revert to lazy loading
+          component: () => import('@/views/HomeView.vue') 
         },
         {
           path: '/about',
           name: 'about',
-          component: () => import('@/views/AboutView.vue'), // Keep About for now
+          component: () => import('@/views/AboutView.vue'), 
         },
-        // --- Add Discover Route ---
         {
           path: '/discover',
           name: 'Discover',
           component: () => import('@/views/DiscoverView.vue')
         },
-        // --- Add Community Route ---
         {
           path: '/community',
           name: 'Community',
           component: () => import('@/views/CommunityView.vue')
         },
+        // --- Personal Center Routes - Refactored ---
         {
-          path: '/personal-center', // Keep Personal Center
+          path: '/personal-center',
+          component: PersonalCenterLayout, // Use the new layout
           meta: { requiresAuth: true },
-          redirect: '/personal-center/profile', // Keep redirect
+          redirect: '/personal-center/profile', // Redirect base path to profile
           children: [
-            // Add a nested child route to load Index.vue within MainLayout
-            {
-              path: '', // Matches /personal-center itself
-              component: () => import('@/views/PersonalCenter/Index.vue'),
-              // Move profile, settings, favorites here as children of Index.vue
-              children: [
                 {
                   path: 'profile',
-                  name: 'UserProfile',
-                  component: () => import('@/views/PersonalCenter/UserProfile.vue')
+                  name: 'ProfileSettings', // Rename for clarity
+                  component: () => import('@/views/PersonalCenter/ProfileSettingsView.vue') // Point to the new settings view
                 },
                 {
-                  path: 'settings',
-                  name: 'AccountSettings',
-                  component: () => import('@/views/PersonalCenter/AccountSettings.vue')
-                },
-                {
-                  path: 'favorites',
-                  name: 'MyFavorites',
-                  component: () => import('@/views/PersonalCenter/MyFavoritesView.vue'),
-                  meta: { requiresAuth: true }
-                },
-                // Add route for My Posts
-                {
-                  path: 'my-posts',
+                  path: 'posts', // Simpler path
                   name: 'MyPosts',
                   component: () => import('@/views/PersonalCenter/MyPostsView.vue'),
-                  meta: { requiresAuth: true }
                 },
-                // Add route for Notifications
+                 {
+                  path: 'favorites', // Simpler path
+                  name: 'MyFavorites',
+                  component: MyFavoritesView,
+                },
                 {
-                  path: 'notifications',
+                  path: 'notifications', // Simpler path
                   name: 'Notifications',
                   component: () => import('@/views/PersonalCenter/NotificationsView.vue'),
-                  meta: { requiresAuth: true }
                 }
+                // Remove the old nested Index.vue and its children if they are no longer needed
               ]
-            }
-          ]
         },
-        // REMOVED PostDetail from here
+        // --- End Personal Center Routes ---
       ]
     },
-    // ADD PostDetail Route at the top level, sibling to '/' and '/login'
     {
-      path: '/posts/:id', // Temporarily remove regex for testing
-      component: MainLayout, // Apply MainLayout to the detail page as well
+      path: '/posts/:id',
+      component: MainLayout,
       children: [
           {
-              path: '', // Matches the /posts/:id path itself
-              name: 'PostDetail', // Add name to the actual component route
+              path: '',
+              name: 'PostDetail',
               component: () => import('@/views/post/PostDetailView.vue'),
-              meta: { requiresAuth: false } 
           }
       ]
     },
@@ -105,7 +85,7 @@ const router = createRouter({
       meta: { requiresGuest: true }
     },
      {
-       path: '/register', // Keep Register route if needed
+       path: '/register',
        name: 'Register',
        component: () => import('@/views/auth/RegisterView.vue'),
        meta: { requiresGuest: true }
@@ -113,16 +93,26 @@ const router = createRouter({
   ]
 })
 
+// Keep the beforeEach guard
 router.beforeEach((to, from, next) => {
   const userStore = useUserStore();
   const isLoggedIn = userStore.isLoggedIn;
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
 
+  // --- Remove specific log for MyFavorites ---
+  // if (to.name === 'MyFavorites') {
+  //     console.log(`[RouterGuard] Navigating to MyFavorites. requiresAuth: ${requiresAuth}, isLoggedIn: ${isLoggedIn}`);
+  // }
+  // --- End remove specific log ---
+
   if (requiresAuth && !isLoggedIn) {
+    // console.log(`[RouterGuard] Auth required but not logged in. Redirecting from ${to.fullPath} to Login.`); // Remove log
     next({ name: 'Login', query: { redirect: to.fullPath } });
-  } else if ((to.name === 'Login' || to.name === 'Register') && isLoggedIn) { // Adjusted condition
+  } else if ((to.name === 'Login' || to.name === 'Register') && isLoggedIn) {
+    // console.log(`[RouterGuard] Already logged in. Redirecting from ${to.name} to Home.`); // Remove log
     next('/');
   } else {
+    // console.log(`[RouterGuard] Allowing navigation to ${to.fullPath}`); // Remove log
     next();
   }
 })

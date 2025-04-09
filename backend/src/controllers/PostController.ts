@@ -48,7 +48,7 @@ export class PostController {
     public static async getPostById(req: AuthenticatedRequest, res: Response): Promise<void> {
         try {
             const postId = parseInt(req.params.id, 10);
-            const currentUserId = req.userId; // Get userId from AuthMiddleware (if logged in)
+            const currentUserId = req.userId;
 
             if (isNaN(postId)) {
                 res.status(400).json({ message: 'Invalid post ID' });
@@ -56,14 +56,15 @@ export class PostController {
             }
 
             const post = await PostService.getPostById(postId, currentUserId);
+
             if (!post) {
                 res.status(404).json({ message: 'Post not found' });
-            } else {
-                res.status(200).json({ post });
+                return;
             }
+            res.status(200).json({ post });
         } catch (error: any) {
             console.error('Get Post By ID Error:', error);
-            res.status(500).json({ message: 'Internal server error retrieving post' });
+            res.status(500).json({ message: 'Failed to retrieve post' });
         }
     }
 

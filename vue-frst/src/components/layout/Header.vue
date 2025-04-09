@@ -21,7 +21,7 @@
         <template v-else>
            <el-dropdown>
               <span class="el-dropdown-link">
-                <el-avatar :size="32" :src="userStore.userAvatar || defaultAvatar" /> 
+                <el-avatar :size="32" :src="userStore.resolvedAvatarUrl" /> 
                 <span class="username">{{ userStore.userName }}</span>
                 <el-icon class="el-icon--right"><arrow-down /></el-icon>
               </span>
@@ -42,7 +42,6 @@
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/modules/user' // 引入 User Store
 import { ArrowDown } from '@element-plus/icons-vue' // 引入图标
-import defaultAvatar from '@/assets/images/default-avatar.png' // 引入默认头像图片
 
 const router = useRouter()
 const userStore = useUserStore() // 获取 Store 实例

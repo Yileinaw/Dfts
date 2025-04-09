@@ -40,7 +40,7 @@ export class NotificationService {
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          actor: { select: { id: true, name: true } },
+          actor: { select: { id: true, name: true, avatarUrl: true } },
           post: { select: { id: true, title: true } },
           comment: { select: { id: true, text: true } } // Include comment if present
         }

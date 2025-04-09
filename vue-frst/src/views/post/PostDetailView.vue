@@ -1,5 +1,10 @@
 <template>
   <div class="post-detail-view">
+    <!-- Add Back Button -->
+    <div class="back-button-container">
+      <el-button :icon="Back" @click="goBack">返回</el-button>
+    </div>
+
     <div v-if="isLoading" class="loading-state">
       <el-skeleton :rows="10" animated />
     </div>
@@ -10,7 +15,7 @@
         <h1>{{ post.title }}</h1>
         <div class="meta-bar"> 
           <div class="author-info">
-            <el-avatar :size="32" :src="defaultAvatar" class="author-avatar" />
+            <el-avatar :size="32" :src="resolveStaticAssetUrl(post.author?.avatarUrl)" class="author-avatar" />
             <div class="info-text">
               <span class="author-name">{{ post.author?.name || '匿名用户' }}</span>
               <span class="publish-time">发布于 {{ formatTime(post.createdAt) }}</span>
@@ -39,30 +44,59 @@
 
       <!-- Comments Section -->
       <div class="comments-section">
-        <h2>评论 ({{ post.commentsCount || comments.length }})</h2>
-        <!-- Comment input -->
-        <div class="comment-input-area">
-          <el-input type="textarea" :rows="3" placeholder="添加你的评论..." v-model="newCommentText"></el-input>
-          <div class="el-button-container">
-            <el-button type="primary" @click="submitComment" :disabled="!newCommentText.trim()" :loading="isSubmittingComment">发表评论</el-button>
+        <h2>评论 ({{ post?.commentsCount || 0 }})</h2> 
+        
+        <!-- Top-level Comment Input -->
+        <div class="comment-input-area top-level-input">
+          <el-avatar :size="32" :src="userStore.resolvedAvatarUrl" class="comment-avatar"/>
+          <div class="input-wrapper">
+             <el-input type="textarea" :rows="2" placeholder="添加评论..." v-model="newCommentText"></el-input>
+             <el-button 
+                type="primary" 
+                @click="submitComment({ parentId: null, text: newCommentText })" 
+                :disabled="!newCommentText.trim()" 
+                :loading="isSubmittingComment && replyingToCommentId === null"
+              >
+                发表评论
+              </el-button>
           </div>
         </div>
-        <!-- Comment list -->
+
+        <el-divider />
+
+        <!-- Comment List (Manual Two-Level Rendering with Flattened Replies) -->
         <div class="comment-list">
             <div v-if="isCommentsLoading" class="comments-loading">
-                <el-skeleton :rows="3" animated />
+                <el-skeleton :rows="5" animated />
             </div>
             <el-alert v-else-if="commentsError" :title="commentsError" type="error" show-icon />
-            <div v-else-if="comments.length > 0">
-                <div v-for="comment in comments" :key="comment.id" class="comment-item">
-                    <el-avatar :size="32" :src="defaultAvatar" class="comment-avatar" />
-                    <div class="comment-content">
-                        <span class="comment-author-name">{{ comment.author?.name || '匿名用户' }}</span>
-                        <span class="comment-time">{{ formatTime(comment.createdAt) }}</span>
-                        <p class="comment-text">{{ comment.text }}</p>
+            <div v-else-if="nestedComments.length > 0">
+                 <!-- Loop through top-level comments -->
+                 <template v-for="topLevelComment in nestedComments" :key="topLevelComment.id">
+                    <CommentItem
+                        :comment="topLevelComment"
+                        @toggle-reply="handleToggleReply"      
+                        @submit-comment="submitComment"  
+                        @delete-comment="deleteComment" 
+                        :reply-to-author-name="null"  
+                    />
+                    <!-- Render ALL descendants flattened into the second level -->
+                    <div 
+                        v-if="topLevelComment.children && topLevelComment.children.length > 0" 
+                        class="replies-container" 
+                        style="margin-left: 40px;" > 
+                        <!-- Use flattenDescendants to get all replies -->
+                        <CommentItem
+                            v-for="reply in flattenDescendants(topLevelComment)" 
+                            :key="reply.id"
+                            :comment="reply" 
+                            :reply-to-author-name="reply.replyToAuthorName" 
+                            @toggle-reply="handleToggleReply"
+                            @submit-comment="submitComment"
+                            @delete-comment="deleteComment"
+                        />
                     </div>
-                    <!-- Add delete button for comment author later -->
-                </div>
+                 </template>
             </div>
             <el-empty description="暂无评论，快来抢沙发吧！" v-else />
         </div>
@@ -74,15 +108,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch, provide } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElSkeleton, ElAlert, ElEmpty, ElAvatar, ElButton, ElInput, ElMessage } from 'element-plus';
-import { Star, StarFilled } from '@element-plus/icons-vue';
+import { ElSkeleton, ElAlert, ElEmpty, ElAvatar, ElButton, ElInput, ElMessage, ElDivider } from 'element-plus';
+import { Star, StarFilled, ChatLineSquare, Delete, Back } from '@element-plus/icons-vue';
 import { PostService } from '@/services/PostService';
-import type { Post, Comment } from '@/types/models'; // Import Comment type
-import defaultAvatar from '@/assets/images/default-avatar.png';
-import { useUserStore } from '@/stores/modules/user';
+import type { Post, Comment, User } from '@/types/models'; // Import Comment type
 import { marked } from 'marked'; // Import marked library
+import { resolveStaticAssetUrl } from '@/utils/urlUtils'; // Correct import path
+import { useUserStore } from '@/stores/modules/user';
+import CommentItem from '@/components/comments/CommentItem.vue'; 
 
 const route = useRoute();
 const router = useRouter();
@@ -104,7 +139,55 @@ const isLiking = ref(false);
 const isFavoriting = ref(false);
 const isSubmittingComment = ref(false);
 const newCommentText = ref('');
-// --- End Action States ---
+
+// --- Reply State ---
+const replyingToCommentId = ref<number | null>(null);
+const replyText = ref('');
+const replyInputRef = ref<InstanceType<typeof ElInput> | null>(null);
+
+// 使用 provide 提供状态
+provide('replyingToCommentId', replyingToCommentId);
+
+// --- Computed property for nested comments ---
+interface NestedComment extends Comment {
+    children?: NestedComment[];
+}
+
+const nestedComments = computed((): NestedComment[] => {
+    const commentsMap: Record<number, NestedComment> = {};
+    const rootComments: NestedComment[] = [];
+
+    // Create a map of comments by their ID and add a children array
+    comments.value.forEach(comment => {
+        commentsMap[comment.id] = { ...comment, children: [] };
+    });
+
+    // Build the nested structure
+    comments.value.forEach(comment => {
+        const nestedComment = commentsMap[comment.id];
+        if (comment.parentId && commentsMap[comment.parentId]) {
+            // Ensure children array exists before pushing
+            if (!commentsMap[comment.parentId].children) {
+                commentsMap[comment.parentId].children = [];
+            }
+            commentsMap[comment.parentId].children!.push(nestedComment);
+        } else {
+            rootComments.push(nestedComment);
+        }
+    });
+
+    // Sort comments and their children by creation date (optional)
+    const sortComments = (list: NestedComment[]) => {
+        list.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        list.forEach(c => {
+            if (c.children) sortComments(c.children);
+        });
+    };
+    sortComments(rootComments);
+
+    return rootComments;
+});
+// --- End Computed property for nested comments ---
 
 // --- Computed property for rendered Markdown content ---
 const renderedContent = computed(() => {
@@ -131,7 +214,7 @@ const fetchComments = async () => {
     commentsError.value = null;
     try {
         const response = await PostService.getCommentsByPostId(postId.value);
-        comments.value = response.comments || [];
+        comments.value = response || []; 
     } catch (err: any) {
         console.error('Error fetching comments:', err);
         commentsError.value = err.response?.data?.message || '加载评论失败';
@@ -152,19 +235,23 @@ const fetchPostDetails = async () => {
   isLoading.value = true;
   error.value = null;
   try {
-    const fetchedPostResponse = await PostService.getPostById(id);
-    if (fetchedPostResponse && fetchedPostResponse.post) {
-      post.value = fetchedPostResponse.post;
-      // Fetch comments after post details are loaded successfully
+    const responseWrapper = await PostService.getPostById(id);
+    console.log('[fetchPostDetails] API Response Wrapper:', responseWrapper);
+    
+    const fetchedPost = responseWrapper.post; 
+
+    if (fetchedPost) { 
+      post.value = fetchedPost;
+      console.log('[fetchPostDetails] Assigned post.value.author:', JSON.stringify(post.value.author)); 
       await fetchComments(); 
     } else {
       post.value = null;
       error.value = '帖子未找到或数据格式错误'; 
     }
   } catch (err: any) {
-    console.error('Error fetching post details:', err);
-    post.value = null;
-    error.value = err.response?.data?.message || '加载帖子详情失败';
+     console.error('Error fetching post details:', err);
+     post.value = null;
+     error.value = err.response?.data?.message || '加载帖子详情失败';
   } finally {
     isLoading.value = false;
   }
@@ -230,32 +317,146 @@ const handleFavorite = async () => {
   }
 };
 
-const submitComment = async () => {
-    if (!post.value || !newCommentText.value.trim()) return;
-    if (!userStore.isLoggedIn) return ElMessage.warning('请先登录');
-    isSubmittingComment.value = true;
+const submitComment = async (payload: { parentId: number | null; text: string }) => {
+    if (!post.value) return;
+    const { parentId, text } = payload;
+
+    if (!text || !text.trim()) {
+        ElMessage.warning('评论内容不能为空');
+        return;
+    }
+    if (!userStore.isLoggedIn) {
+        ElMessage.warning('请先登录');
+        return;
+    }
+    
+    // Determine which loading state to use
+    const setLoading = (loading: boolean) => {
+      if (parentId === null) {
+        isSubmittingComment.value = loading; // Top-level comment loading
+      } else {
+        // For replies, CommentItem has its own loading state, 
+        // but we might need a general loading state or handle it differently
+        isSubmittingComment.value = loading; // Use general one for now
+      }
+    };
+
+    setLoading(true);
 
     try {
-        // Assuming PostService has a method like createComment(postId, { text })
-        await PostService.createComment(post.value.id, { text: newCommentText.value });
-        ElMessage.success('评论发表成功');
-        newCommentText.value = ''; // Clear input
-        // Refresh comments list
-        await fetchComments(); 
-        // Optionally update comments count on post object if backend doesn't include it
-        if(post.value) {
+        // Prepare the payload for the service
+        const servicePayload: { text: string; parentId?: number } = {
+            text: text.trim(),
+        };
+        if (parentId !== null) {
+            servicePayload.parentId = parentId;
+        }
+
+        await PostService.createComment(post.value.id, servicePayload);
+        ElMessage.success(parentId ? '回复发表成功' : '评论发表成功');
+
+        // Clear the correct input and close reply box
+        if (parentId !== null) {
+            // Clear replyText in CommentItem? - No, CommentItem clears its own input on emit
+            replyingToCommentId.value = null; // Close the reply input box globally
+        } else {
+            newCommentText.value = ''; // Clear top-level comment input
+        }
+
+        await fetchComments(); // Refresh comments list
+        if (post.value) {
+            // Update count (consider potential race conditions if backend doesn't return updated count)
             post.value.commentsCount = (post.value.commentsCount || 0) + 1;
         }
     } catch (err: any) {
-        console.error("Error submitting comment:", err);
-        ElMessage.error(err.response?.data?.message || '评论发表失败');
+        console.error("Error submitting comment/reply:", err);
+        ElMessage.error(err.response?.data?.message || (parentId ? '回复发表失败' : '评论发表失败'));
     } finally {
-        isSubmittingComment.value = false;
+        setLoading(false);
     }
 };
 
+const handleToggleReply = (id: number) => {
+  console.log('[PostDetailView] handleToggleReply called with id:', id);
+  console.log('[PostDetailView] Current replyingToCommentId before change:', replyingToCommentId.value);
+  if (replyingToCommentId.value === id) {
+    replyingToCommentId.value = null; // Close if already open
+    console.log('[PostDetailView] Closing reply input for comment id:', id);
+  } else {
+    replyingToCommentId.value = id; // Open for this comment
+    console.log('[PostDetailView] Opening reply input for comment id:', id);
+  }
+  console.log('[PostDetailView] Current replyingToCommentId after change:', replyingToCommentId.value);
+};
 
-// --- End Action Handlers ---
+const deleteComment = async (id: number) => {
+    if (!post.value || !userStore.isLoggedIn) return;
+    // Optional: Confirmation dialog
+    try {
+        await PostService.deleteComment(id);
+        ElMessage.success('评论删除成功');
+        // Update comments count locally (consider race conditions)
+        if (post.value && post.value.commentsCount) {
+            // Find the comment and its children to adjust count accurately
+            let countToRemove = 1;
+            // Helper function to find a comment in the nested structure
+            const findComment = (commentId: number, list: NestedComment[]): NestedComment | null => {
+                for (const c of list) {
+                    if (c.id === commentId) return c;
+                    if (c.children) {
+                        const found = findComment(commentId, c.children);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+            // Helper function to count all children recursively
+            const countChildren = (comment: NestedComment | null): number => {
+                if (!comment || !comment.children || comment.children.length === 0) return 0;
+                let count = comment.children.length;
+                comment.children.forEach((child: NestedComment) => { 
+                    count += countChildren(child);
+                });
+                return count;
+            };
+            const commentToDelete = findComment(id, nestedComments.value); // Search in nested structure
+            if (commentToDelete) {
+                countToRemove += countChildren(commentToDelete);
+            }
+            // Ensure count doesn't go below zero
+            post.value.commentsCount = Math.max(0, post.value.commentsCount - countToRemove);
+        }
+        await fetchComments(); // Refresh the comments list from the server
+    } catch (err: any) {
+        console.error('Error deleting comment:', err);
+        ElMessage.error(err.response?.data?.message || '评论删除失败');
+    }
+};
+
+// --- Helper function to flatten descendants and get parent author name ---
+interface FlattenedComment extends Comment {
+    replyToAuthorName?: string | null;
+}
+
+const flattenDescendants = (comment: NestedComment): FlattenedComment[] => {
+    let descendants: FlattenedComment[] = [];
+    const parentAuthorName = comment.author?.name || '匿名用户'; // Get the name of the comment being replied to
+
+    const traverse = (children: NestedComment[], currentParentAuthorName: string | null) => {
+        if (!children) return;
+        children.forEach(child => {
+            // Add the current child with the name of the author it directly replies to
+            descendants.push({ ...child, replyToAuthorName: currentParentAuthorName });
+            // Recursively traverse its children, passing the current child's author name
+            traverse(child.children || [], child.author?.name || '匿名用户');
+        });
+    };
+
+    // Start traversal with the direct children, passing the top-level comment's author name
+    traverse(comment.children || [], parentAuthorName);
+    return descendants;
+};
+// --- End Helper Function ---
 
 onMounted(() => {
   fetchPostDetails();
@@ -263,6 +464,11 @@ onMounted(() => {
 
 // Optional: Watch for route changes if user navigates between posts directly
 // watch(() => route.params.id, fetchPostDetails);
+
+// Function to go back
+const goBack = () => {
+  router.back(); // Use router.back() to navigate to the previous page
+};
 
 </script>
 
@@ -460,49 +666,35 @@ onMounted(() => {
         margin-bottom: 15px;
     }
 
-    .comment-item {
-        display: flex;
-        padding: 18px 15px;
-        border-bottom: 1px solid var(--el-border-color-lighter);
-        background-color: #fff;
-        border-radius: 4px;
-        margin-bottom: 15px;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-
-        &:last-child {
-            margin-bottom: 0;
-            border-bottom: none; 
-        }
-
-        .comment-avatar {
-            margin-right: 15px;
-            flex-shrink: 0;
-        }
-
-        .comment-content {
-            flex-grow: 1;
-            .comment-author-name {
-                font-weight: 600;
-                font-size: 0.95rem;
-                color: #444;
-                margin-right: 10px;
-            }
-            .comment-time {
-                font-size: 0.8rem;
-                color: #aaa;
-            }
-            .comment-text {
-                margin-top: 8px;
-                line-height: 1.7;
-                font-size: 0.95rem;
-                color: #555;
-                word-wrap: break-word;
-            }
-        }
-    }
-     .el-empty {
+    .el-empty {
          padding: 30px 0;
      }
   }
+}
+
+.comment-input-area.top-level-input {
+    display: flex;
+    align-items: flex-start; // Align avatar top
+    margin-bottom: 20px;
+    .comment-avatar {
+        margin-right: 15px;
+        flex-shrink: 0;
+    }
+    .input-wrapper {
+        flex-grow: 1;
+        .el-textarea {
+            margin-bottom: 10px;
+        }
+        .el-button {
+            float: right;
+        }
+    }
+}
+
+// Style for the back button container
+.back-button-container {
+  margin-bottom: 15px; // Space below the back button
+  padding-bottom: 10px; // Optional: Extra space
+  // border-bottom: 1px solid var(--el-border-color-lighter); // Optional: Separator line
 }
 </style> 

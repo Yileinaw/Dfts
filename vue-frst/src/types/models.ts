@@ -1,33 +1,34 @@
 // vue-frst/src/types/models.ts
 
-// 用户模型 (与后端 Prisma 模型对应，但不包含 password)
+// Consistent User model based on common properties and Prisma schema
 export interface User {
     id: number;
-    email: string;
-    password?: string; // 通常不在前端使用，但可以定义
-    name: string | null; // Prisma 中 String? 对应 string | null
-    createdAt: string; // Prisma DateTime 对应 string (ISO 8601)
+    email: string; // Using email as the primary identifier field shown
+    name: string | null; // Prisma String? maps to string | null
+    avatarUrl: string | null; // Prisma String? maps to string | null
+    createdAt: string; // Prisma DateTime maps to string
     updatedAt: string;
-    posts?: Post[]; // 关联的帖子 (可选，根据 API 返回情况)
+    // posts?: Post[]; // Keep optional, only include if an API endpoint actually populates this
 }
 
-// 帖子模型 (与后端 Prisma 模型对应)
+// Consistent Post model, aligning with Prisma and common usage
 export interface Post {
     id: number;
     title: string;
-    content: string | null;
+    content: string | null; // Prisma String? maps to string | null
     createdAt: string;
     updatedAt: string;
     authorId: number;
-    author?: Pick<User, 'id' | 'name' | 'email'>; // 关联的作者信息 (部分字段)
-    likesCount?: number; // Add likes count (optional for safety)
-    isLiked?: boolean;   // Add isLiked status (optional)
-    commentsCount?: number; // Add comments count
-    favoritesCount?: number; // Add favorites count (optional)
-    isFavorited?: boolean;  // Add isFavorited status (optional)
+    // Use Pick for consistency, selecting fields commonly needed for display
+    author?: Pick<User, 'id' | 'name' | 'avatarUrl'>;
+    likesCount?: number; // Optional count fields
+    commentsCount?: number;
+    favoritesCount?: number;
+    isLiked?: boolean;   // Optional status flags based on current user context
+    isFavorited?: boolean;
 }
 
-// Add Comment interface
+// Consistent Comment model, including author details and parent ID
 export interface Comment {
     id: number;
     text: string;
@@ -35,22 +36,30 @@ export interface Comment {
     updatedAt: string;
     authorId: number;
     postId: number;
-    author?: Pick<User, 'id' | 'name'>; // Include author info for display
+    // Use Pick for author details needed in the UI
+    author?: Pick<User, 'id' | 'name' | 'avatarUrl'>;
+    parentId?: number | null; // For identifying replies
 }
 
-// --- Add Notification Interface --- 
+// Consistent Notification model
 export interface Notification {
     id: number;
     recipientId: number;
     actorId: number;
-    type: string; // Use string here, enum defined in service
-    postId: number;
-    commentId: number | null;
+    postId?: number | null;
+    commentId?: number | null;
+    type: 'LIKE' | 'COMMENT' | 'FAVORITE' | 'FOLLOW';
     read: boolean;
     createdAt: string;
-    // Optional: Include related data directly if the API always provides it
-    actor?: { id: number; name: string | null };
+    actor?: { id: number; name: string | null; avatarUrl: string | null };
     post?: { id: number; title: string };
     comment?: { id: number; text: string };
 }
-// --- End Notification Interface --- 
+
+// Structure for the response when fetching comments for a post.
+// Note: This might need adjustment if PostService.getCommentsByPostId
+// is updated to return only the Comment[] array.
+export interface GetCommentsResponse {
+    comments: Comment[];
+    totalCount: number;
+}
